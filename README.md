@@ -1,54 +1,62 @@
-# Text Processing API Key Assignment
+# Task 3: Authentication and Authorization in a Flask API
 
-This repository contains a Flask API with `X-API-Key` authentication and cURL testing commands as per Task 2 requirements.
+This project implements a secure Employee Management API featuring JWT-based Authentication and Role-Based Authorization (Employee vs. Administrator).
 
-## API Key Assignment & Testers
-1. **Consumer 1:** `key_consumer_1`
-2. **Consumer 2:** `key_consumer_2`
-3. **Consumer 3:** `key_consumer_3`
+## User Credentials for Testing
+1. **Administrator:**
+   - Username: `admin`
+   - Password: `adminpassword`
+   - Permissions: Can View, Add, Update, and Delete employees.
+2. **Employee:**
+   - Username: `john`
+   - Password: `empassword`
+   - Permissions: Can only View employees.
 
 ---
 
-## How to Run the Server
+## Installation & Running
 
-1. **Install Dependencies:**
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-
-2. **Run the Application:**
+2. Run the application:
    ```bash
    python app.py
    ```
 
 ---
 
-## Testing with cURL Commands
+## cURL Testing Commands (Command Prompt / CMD)
 
-### 1. Test Valid Key (Consumer 1)
-```bash
-curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_1"   -d '{"text": "hello rootsoftware"}'
-```
-**Expected Response:** `200 OK` with uppercase text `"HELLO ROOTSOFTWARE"`.
+### Step 1: Login to get JWT Token
+* **Login as Admin:**
+  ```bash
+  curl -X POST http://127.0.0.1:5000/login -H "Content-Type: application/json" -d "{"username": "admin", "password": "adminpassword"}"
+  ```
+* **Login as Employee:**
+  ```bash
+  curl -X POST http://127.0.0.1:5000/login -H "Content-Type: application/json" -d "{"username": "john", "password": "empassword"}"
+  ```
+*(Copy the generated `"token"` string from the response to use below)*
 
-### 2. Test Valid Key (Consumer 2)
+### Step 2: View Employees (Both Admin and Employee can do this)
 ```bash
-curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_2"   -d '{"text": "flask api key authentication"}'
+curl -X GET http://127.0.0.1:5000/employees -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
-### 3. Test Valid Key (Consumer 3)
+### Step 3: Add Employee (Admin Only - Authorized)
 ```bash
-curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_3"   -d '{"text": "testing third key"}'
+curl -X POST http://127.0.0.1:5000/employees -H "Content-Type: application/json" -H "Authorization: Bearer ADMIN_TOKEN_HERE" -d "{"name": "Sara Khan", "department": "Finance", "salary": 80000}"
 ```
 
-### 4. Test Invalid Key (Rejection Test)
+### Step 4: Authorization Failure Test (Employee trying to Add Employee)
+If an **Employee** token is used to add an employee, it will reject with `403 Forbidden`:
 ```bash
-curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: invalid_secret_key"   -d '{"text": "test data"}'
+curl -X POST http://127.0.0.1:5000/employees -H "Content-Type: application/json" -H "Authorization: Bearer EMPLOYEE_TOKEN_HERE" -d "{"name": "Test User", "department": "IT", "salary": 60000}"
 ```
-**Expected Response:** `403 Forbidden` (`Invalid API Key!`).
 
-### 5. Test Missing Key (Rejection Test)
+### Step 5: Authentication Failure Test (Invalid/Missing Token)
 ```bash
-curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -d '{"text": "test data"}'
+curl -X GET http://127.0.0.1:5000/employees -H "Authorization: Bearer invalid_token_xyz"
 ```
-**Expected Response:** `401 Unauthorized` (`API Key Missing!`).
