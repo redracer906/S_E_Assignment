@@ -1,28 +1,54 @@
-# Task 1 — Database-Driven Flask API with Streamlit
+# Text Processing API Key Assignment
 
-## Run
-Open two terminals in the assignment root and install requirements with `pip install -r requirements.txt`.
+This repository contains a Flask API with `X-API-Key` authentication and cURL testing commands as per Task 2 requirements.
 
-Terminal 1:
+## API Key Assignment & Testers
+1. **Consumer 1:** `key_consumer_1`
+2. **Consumer 2:** `key_consumer_2`
+3. **Consumer 3:** `key_consumer_3`
+
+---
+
+## How to Run the Server
+
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the Application:**
+   ```bash
+   python app.py
+   ```
+
+---
+
+## Testing with cURL Commands
+
+### 1. Test Valid Key (Consumer 1)
 ```bash
-python Task1_Student_API/app.py
+curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_1"   -d '{"text": "hello rootsoftware"}'
+```
+**Expected Response:** `200 OK` with uppercase text `"HELLO ROOTSOFTWARE"`.
+
+### 2. Test Valid Key (Consumer 2)
+```bash
+curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_2"   -d '{"text": "flask api key authentication"}'
 ```
 
-Terminal 2:
+### 3. Test Valid Key (Consumer 3)
 ```bash
-streamlit run Task1_Student_API/streamlit_app.py
+curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: key_consumer_3"   -d '{"text": "testing third key"}'
 ```
 
-Open the local Streamlit URL shown in the terminal. SQLite database `students.db` is created automatically by the Flask app. Keep the Flask terminal running while using Streamlit.
-
-## API quick tests
+### 4. Test Invalid Key (Rejection Test)
 ```bash
-curl http://127.0.0.1:5001/students
-curl -X POST http://127.0.0.1:5001/students -H "Content-Type: application/json" -d '{"name":"Ali Khan","department":"BSCS","email":"ali@example.com"}'
-curl http://127.0.0.1:5001/students/1
-curl -X PUT http://127.0.0.1:5001/students/1 -H "Content-Type: application/json" -d '{"name":"Ali Khan","department":"Software Engineering","email":"ali@example.com"}'
-curl -X DELETE http://127.0.0.1:5001/students/1
+curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -H "X-API-Key: invalid_secret_key"   -d '{"text": "test data"}'
 ```
+**Expected Response:** `403 Forbidden` (`Invalid API Key!`).
 
-## Video demonstration
-Add your own public video demonstration link here before submission.
+### 5. Test Missing Key (Rejection Test)
+```bash
+curl -X POST http://127.0.0.1:5000/process   -H "Content-Type: application/json"   -d '{"text": "test data"}'
+```
+**Expected Response:** `401 Unauthorized` (`API Key Missing!`).

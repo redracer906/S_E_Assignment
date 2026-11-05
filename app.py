@@ -1,102 +1,49 @@
-from flask import Flask, jsonify, request
-import sqlite3
-from pathlib import Path
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
-DB_PATH = Path(__file__).with_name("students.db")
 
+# Three valid API keys for 3 different consumers/testers
+VALID_API_KEYS = {
+    "key_consumer_1": "Tester 1 (Alpha)",
+    "key_consumer_2": "Tester 2 (Beta)",
+    "key_consumer_3": "Tester 3 (Gamma)"
+}
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+@app.route('/process', methods=['POST'])
+def process_text():
+    # Retrieve X-API-Key from HTTP request header
+    api_key = request.headers.get('X-API-Key')
 
+    # Validate the API key
+    if not api_key:
+        return jsonify({
+            "status": "error",
+            "message": "API Key Missing! Please provide 'X-API-Key' in the HTTP header."
+        }), 401
 
-def initialize_database():
-    with get_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS students (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                department TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE
-            )
-        """)
+    if api_key not in VALID_API_KEYS:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid API Key! Access denied."
+        }), 403
 
+    # Parse JSON body
+    data = request.get_json()
+    if not data or 'text' not in data:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid payload! 'text' field is required in JSON."
+        }), 400
 
-@app.get("/students")
-def get_students():
-    with get_connection() as conn:
-        rows = conn.execute("SELECT id, name, department, email FROM students ORDER BY id").fetchall()
-    return jsonify([dict(row) for row in rows])
+    input_text = data['text']
+    processed_text = input_text.upper()
 
+    return jsonify({
+        "status": "success",
+        "consumer": VALID_API_KEYS[api_key],
+        "original_text": input_text,
+        "processed_text": processed_text
+    }), 200
 
-@app.get("/students/<int:student_id>")
-def get_student(student_id):
-    with get_connection() as conn:
-        row = conn.execute(
-            "SELECT id, name, department, email FROM students WHERE id = ?", (student_id,)
-        ).fetchone()
-    if row is None:
-        return jsonify({"error": "Student not found"}), 404
-    return jsonify(dict(row))
-
-
-def validate_student_payload(data):
-    if not isinstance(data, dict):
-        return "Request body must be a JSON object"
-    for field in ("name", "department", "email"):
-        if not isinstance(data.get(field), str) or not data[field].strip():
-            return f"'{field}' is required and must be a non-empty string"
-    return None
-
-
-@app.post("/students")
-def add_student():
-    data = request.get_json(silent=True)
-    error = validate_student_payload(data)
-    if error:
-        return jsonify({"error": error}), 400
-    try:
-        with get_connection() as conn:
-            cursor = conn.execute(
-                "INSERT INTO students (name, department, email) VALUES (?, ?, ?)",
-                (data["name"].strip(), data["department"].strip(), data["email"].strip()),
-            )
-            student_id = cursor.lastrowid
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "A student with this email already exists"}), 409
-    return jsonify({"message": "Student added", "id": student_id}), 201
-
-
-@app.put("/students/<int:student_id>")
-def update_student(student_id):
-    data = request.get_json(silent=True)
-    error = validate_student_payload(data)
-    if error:
-        return jsonify({"error": error}), 400
-    try:
-        with get_connection() as conn:
-            cursor = conn.execute(
-                "UPDATE students SET name = ?, department = ?, email = ? WHERE id = ?",
-                (data["name"].strip(), data["department"].strip(), data["email"].strip(), student_id),
-            )
-            if cursor.rowcount == 0:
-                return jsonify({"error": "Student not found"}), 404
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "A student with this email already exists"}), 409
-    return jsonify({"message": "Student updated"})
-
-
-@app.delete("/students/<int:student_id>")
-def delete_student(student_id):
-    with get_connection() as conn:
-        cursor = conn.execute("DELETE FROM students WHERE id = ?", (student_id,))
-        if cursor.rowcount == 0:
-            return jsonify({"error": "Student not found"}), 404
-    return jsonify({"message": "Student deleted"})
-
-
-if __name__ == "__main__":
-    initialize_database()
-    app.run(host="127.0.0.1", port=5001, debug=False)
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
